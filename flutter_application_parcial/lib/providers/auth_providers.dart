@@ -10,7 +10,7 @@ class AuthProvider extends ChangeNotifier {
   String? _errorMessage;
   UserStatus? _userStatus;
   Timer? _statusCheckTimer;
-  bool _loginSuccess = false;
+  bool _isSavingState = false;
 
   // Getters
   UserModel? get currentUser => _currentUser;
@@ -19,13 +19,12 @@ class AuthProvider extends ChangeNotifier {
   UserStatus? get userStatus => _userStatus;
   bool get isAuthenticated => _currentUser != null;
   bool get isActive => _userStatus == UserStatus.active;
-  bool get loginSuccess => _loginSuccess;
+  bool get isSavingState => _isSavingState;
 
   // LOGIN
   Future<bool> login(String email, String password) async {
     _isLoading = true;
     _errorMessage = null;
-    _loginSuccess = false;
     notifyListeners();
 
     try {
@@ -38,7 +37,6 @@ class AuthProvider extends ChangeNotifier {
         try {
           _currentUser = UserModel.fromJson(response.data);
           _userStatus = UserStatus.active;
-          _loginSuccess = true;
           _startPeriodicStatusCheck();
           _isLoading = false;
           notifyListeners();
@@ -47,7 +45,6 @@ class AuthProvider extends ChangeNotifier {
         } catch (parseError) {
           print('❌ Error parseando usuario: $parseError');
           _errorMessage = 'Error procesando datos del usuario';
-          _loginSuccess = false;
           _isLoading = false;
           notifyListeners();
           return false;
@@ -55,7 +52,6 @@ class AuthProvider extends ChangeNotifier {
       } else {
         _errorMessage = response.message ?? 'Login fallido';
         _userStatus = response.userStatus;
-        _loginSuccess = false;
         _isLoading = false;
         notifyListeners();
         print('❌ Login fallido: ${response.message}');
@@ -65,7 +61,6 @@ class AuthProvider extends ChangeNotifier {
       print('❌ Error inesperado en login: $e');
       _errorMessage = 'Error inesperado: ${e.toString()}';
       _userStatus = UserStatus.error;
-      _loginSuccess = false;
       _isLoading = false;
       notifyListeners();
       return false;
@@ -129,15 +124,70 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<ApiResponse> createUserStatus(String name, String description) async {
+    if (_currentUser == null || _currentUser!.token == null) {
+      return ApiResponse(
+        success: false,
+        message: 'No hay una sesión activa para crear el estado.',
+        data: null,
+        statusCode: 401,
+      );
+    }
+
+    _isSavingState = true;
+    notifyListeners();
+
+    try {
+      final response = await ApiService.createUserStatus(
+        name,
+        description: description,
+        userId: _currentUser!.id,
+        token: _currentUser!.token!,
+      );
+      if (response.success) {
+        _syncUserState(name, response.data);
+        notifyListeners();
+      }
+      return response;
+    } finally {
+      _isSavingState = false;
+      notifyListeners();
+    }
+  }
+
+  void _syncUserState(String fallbackName, dynamic responseData) {
+    final statusData =
+        responseData is Map<String, dynamic> ? responseData : <String, dynamic>{};
+    final rawStatus = statusData['status'] ?? statusData['name'] ?? fallbackName;
+    final normalizedStatus = rawStatus.toString().trim().toLowerCase();
+    final isInactiveStatus = normalizedStatus == 'inactive' ||
+        normalizedStatus == 'inactivo' ||
+        normalizedStatus == 'suspendido' ||
+        normalizedStatus == 'suspended' ||
+        normalizedStatus == 'blocked' ||
+        normalizedStatus == 'bloqueado' ||
+        normalizedStatus == '0' ||
+        normalizedStatus == 'false';
+
+    _userStatus = isInactiveStatus ? UserStatus.inactive : UserStatus.active;
+
+    if (_currentUser != null) {
+      _currentUser = UserModel(
+        id: _currentUser!.id,
+        email: _currentUser!.email,
+        name: _currentUser!.name,
+        token: _currentUser!.token,
+        isActive: !isInactiveStatus,
+        role: _currentUser!.role,
+        isVerified: _currentUser!.isVerified,
+        lastLogin: _currentUser!.lastLogin,
+      );
+    }
+  }
+
   // LIMPIAR ERROR
   void clearError() {
     _errorMessage = null;
-    notifyListeners();
-  }
-
-  // RESETEAR LOGIN SUCCESS
-  void resetLoginSuccess() {
-    _loginSuccess = false;
     notifyListeners();
   }
 

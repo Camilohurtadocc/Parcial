@@ -39,8 +39,8 @@ user statuses from the database. Here's a breakdown of what it does: */
 
   async addUserStatus (req, res) {
     try {
-      const { name, description } = req.body;
-      if (!name || !description) {
+      const { name, description = "" } = req.body;
+      if (!name) {
         return res.status(400).json({ error: "Missing required fields" });
       }
       let sqlQuery = "INSERT INTO user_status (User_status_name ,User_status_description) VALUES (?,?)";

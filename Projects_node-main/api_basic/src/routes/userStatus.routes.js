@@ -5,17 +5,16 @@
 **/
 import {Router} from 'express';
 import {showUserStatus,showUserStatusId,addUserStatus,updateUserStatus,deleteUserStatus} from '../controllers/userStatus.controller.js';
-import { verifyToken } from '../middleware/authMiddleware.js';
 const router=Router();
 const apiName='/userStatus';
 
 router.route(apiName)
-  .get(verifyToken,showUserStatus)  // Get all UserStatus
-  .post(verifyToken,addUserStatus); // Add UserStatus
+  .get(showUserStatus)  // Get all UserStatus
+  .post(addUserStatus); // Add UserStatus
 
 router.route(`${apiName}/:id`)
-  .get(verifyToken,showUserStatusId)  // Get UserStatus by Id
-  .put(verifyToken,updateUserStatus)  // Update UserStatus by Id
-  .delete(verifyToken,deleteUserStatus); // Delete UserStatus by Id
+  .get(showUserStatusId)  // Get UserStatus by Id
+  .put(updateUserStatus)  // Update UserStatus by Id
+  .delete(deleteUserStatus); // Delete UserStatus by Id
 
 export default router;

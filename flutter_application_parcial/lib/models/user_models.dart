@@ -34,10 +34,4 @@ class UserModel {
       lastLogin: json['lastLogin'] ?? json['ultimo_acceso'],
     );
   }
-
-  String get statusMessage {
-    if (!isActive) return 'Cuenta inactiva';
-    if (!isVerified) return 'Email no verificado';
-    return 'Activo';
-  }
 }

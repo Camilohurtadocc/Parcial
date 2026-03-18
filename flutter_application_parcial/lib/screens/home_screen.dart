@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/auth_providers.dart';
 import '../models/api_response.dart';
-import '../widgets/user_status_badge.dart';
+import '../providers/auth_providers.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+  final _statusFormKey = GlobalKey<FormState>();
+  final _statusNameController = TextEditingController();
+  final _statusDescriptionController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -22,6 +25,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _statusNameController.dispose();
+    _statusDescriptionController.dispose();
     super.dispose();
   }
 
@@ -46,15 +51,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _showStatusDialog(UserStatus? status) {
-    String title = 'Sesión expirada';
-    String content = 'Tu sesión ha expirado. Inicia sesión nuevamente.';
+    String title = 'Sesion expirada';
+    String content = 'Tu sesion ha expirado. Inicia sesion nuevamente.';
 
     if (status == UserStatus.inactive) {
       title = 'Cuenta inactiva';
-      content = 'Tu cuenta está inactiva. Contacta al administrador.';
+      content = 'Tu cuenta esta inactiva. Contacta al administrador.';
     } else if (status == UserStatus.error) {
-      title = 'Error de conexión';
-      content = 'No se pudo verificar tu estado. Revisa tu conexión.';
+      title = 'Error de conexion';
+      content = 'No se pudo verificar tu estado. Revisa tu conexion.';
     }
 
     showDialog(
@@ -76,6 +81,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  Future<void> _saveUserState() async {
+    if (!_statusFormKey.currentState!.validate()) {
+      return;
+    }
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final response = await authProvider.createUserStatus(
+      _statusNameController.text.trim(),
+      _statusDescriptionController.text.trim(),
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(response.message),
+        backgroundColor: response.success ? Colors.green : Colors.red,
+      ),
+    );
+
+    if (response.success) {
+      _statusNameController.clear();
+      _statusDescriptionController.clear();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -84,18 +117,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         actions: [
-          // Status badge
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 8),
-            child: Center(child: UserStatusBadge()),
-          ),
-          // Refresh button
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _checkUserStatus,
             tooltip: 'Verificar estado',
           ),
-          // Logout button
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
@@ -106,7 +132,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 Navigator.pushReplacementNamed(context, '/login');
               }
             },
-            tooltip: 'Cerrar sesión',
+            tooltip: 'Cerrar sesion',
           ),
         ],
       ),
@@ -120,81 +146,143 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             );
           }
 
-          return Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Avatar
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundColor: Colors.blue.shade100,
-                    child: Text(
-                      user.name[0].toUpperCase(),
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 700),
+                child: Column(
+                  children: [
+                    CircleAvatar(
+                      radius: 50,
+                      backgroundColor: Colors.blue.shade100,
+                      child: Text(
+                        user.name[0].toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 40,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Bienvenido',
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      user.name,
                       style: const TextStyle(
-                        fontSize: 40,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Welcome message
-                  Text(
-                    '¡Bienvenido!',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    user.name,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w500,
+                    const SizedBox(height: 4),
+                    Text(
+                      user.email,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    user.email,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  const SizedBox(height: 30),
-
-                  // Status card
-                  Card(
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: [
-                          const Text(
-                            'Estado de la cuenta',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
+                    const SizedBox(height: 24),
+                    Card(
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Form(
+                          key: _statusFormKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Crear estado de usuario',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Escribe el estado que quieres guardar en la base de datos.',
+                              ),
+                              const SizedBox(height: 16),
+                              TextFormField(
+                                controller: _statusNameController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Nombre del estado',
+                                  hintText: 'Ejemplo: Activo, Suspendido',
+                                  border: OutlineInputBorder(),
+                                ),
+                                validator: (value) {
+                                  final text = value?.trim() ?? '';
+                                  if (text.isEmpty) {
+                                    return 'Ingresa el nombre del estado';
+                                  }
+                                  if (text.length < 3) {
+                                    return 'Debe tener al menos 3 caracteres';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                              TextFormField(
+                                controller: _statusDescriptionController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Descripción del estado',
+                                  hintText: 'Ejemplo: El usuario tiene acceso total',
+                                  border: OutlineInputBorder(),
+                                ),
+                                validator: (value) {
+                                  final text = value?.trim() ?? '';
+                                  if (text.isEmpty) {
+                                    return 'Ingresa la descripción del estado';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: authProvider.isSavingState
+                                      ? null
+                                      : _saveUserState,
+                                  icon: authProvider.isSavingState
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : const Icon(Icons.save),
+                                  label: Text(
+                                    authProvider.isSavingState
+                                        ? 'Guardando...'
+                                        : 'Guardar estado',
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          const Divider(height: 20),
-                          _buildInfoRow('Estado', user.statusMessage),
-                          _buildInfoRow('Rol', user.role ?? 'Usuario'),
-                          _buildInfoRow('ID', user.id),
-                          _buildInfoRow('Email verificado',
-                              user.isVerified ? 'Sí' : 'No'),
-                          if (user.lastLogin != null)
-                            _buildInfoRow(
-                                'Último acceso', _formatDate(user.lastLogin!)),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           );
@@ -203,36 +291,4 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontWeight: FontWeight.w500,
-              color: Colors.grey,
-            ),
-          ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatDate(String dateStr) {
-    try {
-      final date = DateTime.parse(dateStr);
-      return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute}';
-    } catch (e) {
-      return dateStr;
-    }
-  }
 }
