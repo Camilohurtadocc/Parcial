@@ -20,18 +20,30 @@ class UserModel {
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    final nestedUser = json['user'];
+    final source = nestedUser is Map<String, dynamic> ? nestedUser : json;
+
     return UserModel(
-      id: json['id']?.toString() ?? json['userId']?.toString() ?? '',
-      email: json['email'] ?? '',
-      name: json['name'] ?? json['username'] ?? json['fullName'] ?? 'Usuario',
-      token: json['token'] ?? json['accessToken'] ?? json['access_token'],
-      isActive: json['isActive'] ??
-          json['active'] ??
-          (json['status'] == 'active') ??
+      id: source['id']?.toString() ??
+          source['userId']?.toString() ??
+          source['user_id']?.toString() ??
+          '',
+      email: source['email'] ?? '',
+      name:
+          source['name'] ?? source['username'] ?? source['fullName'] ?? 'Usuario',
+      token: json['token'] ??
+          json['accessToken'] ??
+          json['access_token'] ??
+          source['token'] ??
+          source['accessToken'] ??
+          source['access_token'],
+      isActive: source['isActive'] ??
+          source['active'] ??
+          (source['status'] == 'active') ??
           true,
-      role: json['role'] ?? json['rol'] ?? 'user',
-      isVerified: json['isVerified'] ?? json['email_verified'] ?? false,
-      lastLogin: json['lastLogin'] ?? json['ultimo_acceso'],
+      role: source['role'] ?? source['rol'] ?? 'user',
+      isVerified: source['isVerified'] ?? source['email_verified'] ?? false,
+      lastLogin: source['lastLogin'] ?? source['ultimo_acceso'],
     );
   }
 }

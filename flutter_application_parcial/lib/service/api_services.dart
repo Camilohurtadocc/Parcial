@@ -34,7 +34,7 @@ class ApiService {
         );
       }
 
-      final jsonResponse = jsonDecode(response.body) as Map<String, dynamic>;
+      final jsonResponse = _normalizeUserPayload(_asMap(response.body));
 
       return ApiResponse(
         success: true,
@@ -82,7 +82,7 @@ class ApiService {
           )
           .timeout(const Duration(seconds: 10));
 
-      final jsonResponse = jsonDecode(response.body) as Map<String, dynamic>;
+      final jsonResponse = _normalizeUserPayload(_asMap(response.body));
 
       UserStatus status;
       switch (response.statusCode) {
@@ -164,6 +164,15 @@ class ApiService {
     required String userId,
     required String token,
   }) async {
+    if (userId.trim().isEmpty) {
+      return ApiResponse(
+        success: false,
+        message: 'No se pudo identificar el usuario autenticado.',
+        data: null,
+        statusCode: 400,
+      );
+    }
+
     try {
       final response = await http
           .post(
@@ -174,18 +183,16 @@ class ApiService {
             },
             body: jsonEncode({
               'name': name,
+              'status': name,
               'description': description,
               'userId': userId,
               'user_id': userId,
+              'id_user': userId,
             }),
           )
           .timeout(const Duration(seconds: 10));
 
-      final dynamic decodedBody =
-          response.body.isEmpty ? <String, dynamic>{} : jsonDecode(response.body);
-      final jsonResponse = decodedBody is Map<String, dynamic>
-          ? decodedBody
-          : <String, dynamic>{'data': decodedBody};
+      final jsonResponse = _asMap(response.body);
 
       return ApiResponse(
         success: response.statusCode == 200 || response.statusCode == 201,
@@ -208,5 +215,42 @@ class ApiService {
         statusCode: 500,
       );
     }
+  }
+
+  static Map<String, dynamic> _asMap(String body) {
+    if (body.isEmpty) {
+      return <String, dynamic>{};
+    }
+
+    final decodedBody = jsonDecode(body);
+    if (decodedBody is Map<String, dynamic>) {
+      return decodedBody;
+    }
+
+    return <String, dynamic>{'data': decodedBody};
+  }
+
+  static Map<String, dynamic> _normalizeUserPayload(Map<String, dynamic> json) {
+    final normalized = Map<String, dynamic>.from(json);
+    final userData = json['user'];
+
+    if (userData is! Map<String, dynamic>) {
+      return normalized;
+    }
+
+    normalized['id'] ??=
+        userData['id'] ?? userData['userId'] ?? userData['user_id'];
+    normalized['email'] ??= userData['email'];
+    normalized['name'] ??=
+        userData['name'] ?? userData['username'] ?? userData['fullName'];
+    normalized['role'] ??= userData['role'] ?? userData['rol'];
+    normalized['status'] ??= userData['status'];
+    normalized['isActive'] ??= userData['isActive'] ?? userData['active'];
+    normalized['isVerified'] ??=
+        userData['isVerified'] ?? userData['email_verified'];
+    normalized['lastLogin'] ??=
+        userData['lastLogin'] ?? userData['ultimo_acceso'];
+
+    return normalized;
   }
 }
