@@ -67,12 +67,18 @@ El frontend se encuentra en la carpeta `flutter_application_parcial`.
    
    Ejemplo: `static const String baseUrl = 'http://192.168.1.XX:3000/api_v1';`
 
+
 4. Ejecuta la aplicación:
    ```bash
    flutter run
    ```
 
 ---
+
+USUARIO DE INGRESO: 
+USER:camilo@gmail.com
+PASSWORD:12345678
+
 
 ## 🛠️ Solución de Problemas
 
