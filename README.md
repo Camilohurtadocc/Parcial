@@ -89,4 +89,4 @@ PASSWORD:12345678
 ---
 
 ### Desarrollado por:
-[Tu Nombre / Camilo Hurtado]
+[ Camilo Hurtado]
