@@ -10,7 +10,7 @@ class ApiService {
   static const String loginEndpoint = '/apiUserLogin';
   static const String verifyTokenEndpoint = '/apiUserVerifyToken';
   static const String logoutEndpoint = '/auth/logout';
-  static const String userStatusEndpoint = '/user-status';
+  static const String userStatusEndpoint = '/userStatus';
 
   static Future<ApiResponse> login(String email, String password) async {
     try {
